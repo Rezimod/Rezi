@@ -23,14 +23,16 @@ def run_job(name: str) -> None:
     if not script:
         raise SystemExit(f"Unknown job: {name}. Choose from: {', '.join(JOBS)}")
 
-    if str(ROOT) not in sys.path:
-        sys.path.insert(0, str(ROOT))
-
     print(f"Running job: {name}")
     if name == "morning_brief":
         os.chdir(ROOT)
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
     else:
-        os.chdir(script.parent)
+        job_dir = str(script.parent)
+        os.chdir(job_dir)
+        if job_dir not in sys.path:
+            sys.path.insert(0, job_dir)
     runpy.run_path(str(script), run_name="__main__")
 
 
