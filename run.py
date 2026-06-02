@@ -6,23 +6,31 @@ from __future__ import annotations
 import os
 import runpy
 import sys
+import traceback
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 
+JOBS = {
+    "morning_brief": ROOT / "jobs" / "morning_brief.py",
+    "ai_news": ROOT / "jobs" / "ai_news" / "main.py",
+    "crypto_weekly": ROOT / "jobs" / "crypto" / "main.py",
+}
+
 
 def run_job(name: str) -> None:
-    jobs = {
-        "morning_brief": ROOT / "jobs" / "morning_brief.py",
-        "ai_news": ROOT / "jobs" / "ai_news" / "main.py",
-        "crypto_weekly": ROOT / "jobs" / "crypto" / "main.py",
-    }
-    script = jobs.get(name)
+    script = JOBS.get(name)
     if not script:
-        raise SystemExit(f"Unknown job: {name}. Choose from: {', '.join(jobs)}")
+        raise SystemExit(f"Unknown job: {name}. Choose from: {', '.join(JOBS)}")
+
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
 
     print(f"Running job: {name}")
-    os.chdir(script.parent if name != "morning_brief" else ROOT)
+    if name == "morning_brief":
+        os.chdir(ROOT)
+    else:
+        os.chdir(script.parent)
     runpy.run_path(str(script), run_name="__main__")
 
 
@@ -30,7 +38,13 @@ def main() -> None:
     job = os.getenv("JOB", "").strip()
     if not job:
         raise SystemExit("Set JOB to one of: morning_brief, ai_news, crypto_weekly")
-    run_job(job)
+    try:
+        run_job(job)
+    except SystemExit:
+        raise
+    except Exception:
+        traceback.print_exc()
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
