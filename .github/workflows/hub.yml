@@ -1,0 +1,59 @@
+name: Personal Morning Hub
+
+on:
+  schedule:
+    - cron: "0 3 * * *"      # 07:00 Tbilisi — Rezi morning brief
+    - cron: "0 5 * * 1,6"    # 09:00 Tbilisi Mon/Sat — AI news
+    - cron: "0 15 * * 0"     # 19:00 Tbilisi Sun — crypto weekly
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Job to run
+        required: true
+        default: morning_brief
+        type: choice
+        options:
+          - morning_brief
+          - ai_news
+          - crypto_weekly
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Resolve job
+        id: job
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "name=${{ inputs.job }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 3 * * *" ]; then
+            echo "name=morning_brief" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 5 * * 1,6" ]; then
+            echo "name=ai_news" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 15 * * 0" ]; then
+            echo "name=crypto_weekly" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=morning_brief" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run hub job
+        env:
+          JOB: ${{ steps.job.outputs.name }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          MODE: morning
+        run: python run.py
